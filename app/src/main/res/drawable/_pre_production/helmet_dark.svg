@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="256px"
+   height="256px"
+   viewBox="0 0 256 256"
+   id="SVGRoot"
+   version="1.1"
+   inkscape:version="0.91+devel+osxmenu r12882"
+   inkscape:export-filename="/Users/keithconger/helmet_dark.png"
+   inkscape:export-xdpi="192"
+   inkscape:export-ydpi="192"
+   sodipodi:docname="helmet_dark.svg">
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.4453125"
+     inkscape:cx="128"
+     inkscape:cy="128"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1559"
+     inkscape:window-height="1047"
+     inkscape:window-x="0"
+     inkscape:window-y="23"
+     inkscape:window-maximized="0"
+     inkscape:grid-bbox="true" />
+  <defs
+     id="defs4516" />
+  <metadata
+     id="metadata4519">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1">
+    <path
+       d="m 85.442419,171.49511 c 0,0 -5.480999,-4.59383 -6.182889,-8.03359 -0.579234,-2.83898 2.293352,-5.53999 2.028582,-8.43661 -0.167835,-1.8357 -2.569202,1.00439 -2.226793,-4.94843 0.363979,-6.32668 4.439808,-8.98494 8.382924,-11.77466 l 10.224722,5.43276 c 0,0 15.726835,-0.16441 20.998295,-5.62787 3.24309,-3.36109 4.03439,-14.10704 4.03439,-14.10704 L 99.749175,111.99323 104.27529,103.82611 81.036912,92.127911 C 111.78,88.483015 143.17313,75.92202 162.55965,94.102271 c 24.24046,22.732529 12.41204,45.464369 3.99372,66.871589 -28.46575,2.09516 -56.28766,4.8263 -81.109863,10.52267 z"
+       id="path2830"
+       inkscape:connector-curvature="0"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0" />
+  </g>
+</svg>

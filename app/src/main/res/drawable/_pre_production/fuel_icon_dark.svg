@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="256px"
+   height="256px"
+   viewBox="0 0 256 256"
+   id="SVGRoot"
+   version="1.1"
+   inkscape:version="0.91+devel+osxmenu r12882"
+   sodipodi:docname="fuel_icon_dark.svg"
+   inkscape:export-filename="/Users/keithconger/Desktop/fuel_warning"
+   inkscape:export-xdpi="192.00002"
+   inkscape:export-ydpi="192.00002">
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1"
+     inkscape:cx="88"
+     inkscape:cy="119.57798"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1173"
+     inkscape:window-height="781"
+     inkscape:window-x="135"
+     inkscape:window-y="262"
+     inkscape:window-maximized="0"
+     inkscape:grid-bbox="true" />
+  <defs
+     id="defs10678" />
+  <metadata
+     id="metadata10681">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1">
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#ffffff;fill-opacity:1"
+       d="m 224.16531,67.00163 0.19369,-0.1904 -47.63613,-47.50838 -13.55634,13.55593 26.98698,26.9808 c -12.02617,4.60491 -20.5931,16.17859 -20.5931,29.79674 0,17.6457 14.32409,31.9698 31.96938,31.9698 4.5398,0 8.89167,-0.95856 12.78775,-2.6853 l 0,92.2004 c 0,7.031 -5.75716,12.78776 -12.78775,12.78776 -7.03058,0 -12.78775,-5.75717 -12.78775,-12.78776 l 0,-57.54571 c 0,-14.13 -11.4451,-25.57592 -25.57592,-25.57592 l -12.78776,0 0,-89.51469 c 4.2e-4,-14.13082 -11.4451,-25.57592 -25.5755,-25.57592 l -76.72694,0 C 33.9451,12.90898 22.5,24.35408 22.5,38.4849 l 0,204.60612 127.87878,0 0,-95.90939 19.18204,0 0,63.93959 c 0,17.6457 14.3241,31.9698 31.96938,31.9698 17.6457,0 31.9698,-14.3241 31.9698,-31.9698 l 0,-121.4849 c 0,-8.82326 -3.58412,-16.81529 -9.33469,-22.63469 z m -99.36245,35.42245 -76.72694,0 0,-63.93918 76.72735,0 0,63.93918 z m 76.72734,0 c -7.03099,0 -12.78775,-5.75387 -12.78775,-12.78776 0,-7.03388 5.75717,-12.78775 12.78775,-12.78775 7.03059,0 12.78776,5.75387 12.78776,12.78775 0,7.03389 -5.75717,12.78776 -12.78776,12.78776 z"
+       id="path10116" />
+  </g>
+</svg>

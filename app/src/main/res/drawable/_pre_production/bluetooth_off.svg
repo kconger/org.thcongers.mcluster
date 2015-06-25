@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="256px"
+   height="256px"
+   viewBox="0 0 256 256"
+   id="SVGRoot"
+   version="1.1"
+   inkscape:version="0.91+devel+osxmenu r12882"
+   sodipodi:docname="bluetooth_off.svg"
+   inkscape:export-filename="/Users/keithconger/Desktop/bluetooth_off.png"
+   inkscape:export-xdpi="192"
+   inkscape:export-ydpi="192">
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1"
+     inkscape:cx="56"
+     inkscape:cy="128"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1149"
+     inkscape:window-height="878"
+     inkscape:window-x="487"
+     inkscape:window-y="107"
+     inkscape:window-maximized="0"
+     inkscape:grid-bbox="true" />
+  <defs
+     id="defs5917" />
+  <metadata
+     id="metadata5920">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1">
+    <rect
+       ry="69.388298"
+       height="232.72501"
+       width="152.60657"
+       id="rect5362"
+       x="51.69672"
+       y="11.637498"
+       style="fill:#ff0000;fill-opacity:1" />
+    <path
+       d="m 89.133017,90.325255 72.726563,73.203455 -35.05182,42.4437 0,-151.652765 35.05182,40.536118 -72.726563,71.295877"
+       id="path5364"
+       inkscape:connector-curvature="0"
+       style="fill:none;stroke:#ffffff;stroke-width:12.6377306" />
+  </g>
+</svg>

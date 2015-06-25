@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="256px"
+   height="256px"
+   viewBox="0 0 256 256"
+   id="SVGRoot"
+   version="1.1"
+   inkscape:version="0.91+devel+osxmenu r12882"
+   inkscape:export-filename="/Users/keithconger/Desktop/helmet_luggage_dark.png"
+   inkscape:export-xdpi="192"
+   inkscape:export-ydpi="192"
+   sodipodi:docname="helmet_luggage_dark.svg">
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="12.139343"
+     inkscape:cx="115.47873"
+     inkscape:cy="100.90376"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1559"
+     inkscape:window-height="1047"
+     inkscape:window-x="0"
+     inkscape:window-y="23"
+     inkscape:window-maximized="0"
+     inkscape:grid-bbox="true" />
+  <defs
+     id="defs4516" />
+  <metadata
+     id="metadata4519">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1">
+    <path
+       d="m 20.426546,171.49511 c 0,0 -5.480999,-4.59383 -6.182889,-8.03359 -0.579234,-2.83898 2.293352,-5.53999 2.028582,-8.43661 -0.167835,-1.8357 -2.569202,1.00439 -2.226793,-4.94843 0.363979,-6.32668 4.439808,-8.98494 8.382924,-11.77466 l 10.224722,5.43276 c 0,0 15.726835,-0.16441 20.998295,-5.62787 3.24309,-3.36109 4.03439,-14.10704 4.03439,-14.10704 L 34.733302,111.99323 39.259417,103.82611 16.021039,92.127909 c 30.743088,-3.644896 62.136218,-16.205891 81.522738,1.97436 24.240463,22.732531 12.412043,45.464371 3.993723,66.871591 -28.465753,2.09516 -56.287663,4.8263 -81.109866,10.52267 z"
+       id="path2830"
+       inkscape:connector-curvature="0"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0" />
+    <g
+       id="suitcase"
+       transform="matrix(0.41708239,0,0,0.41708239,136.5805,87.960091)"
+       style="fill:#ffffff;fill-opacity:1">
+      <path
+         inkscape:connector-curvature="0"
+         id="left"
+         class="body sides"
+         d="m 40,32 0,160 -16,0 A 24,24 0 0 1 0,168 L 0,56 A 24,24 0 0 1 24,32 Z"
+         style="fill:#ffffff;fill-opacity:1" />
+      <rect
+         id="middle"
+         class="body"
+         x="48"
+         y="32"
+         width="144"
+         height="160"
+         style="fill:#ffffff;fill-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="right"
+         class="body sides"
+         d="m 200,32 16,0 a 24,24 0 0 1 24,24 l 0,112 a 24,24 0 0 1 -24,24 l -16,0 z"
+         style="fill:#ffffff;fill-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="handle"
+         d="M 84,30 84,18 A 18,18 0 0 1 102,0 l 36,0 a 18,18 0 0 1 18,18 l 0,12 -12,0 0,-12 a 6,6 0 0 0 -6,-6 l -36,0 a 6,6 0 0 0 -6,6 l 0,12 z"
+         style="fill:#ffffff;fill-opacity:1" />
+    </g>
+  </g>
+</svg>

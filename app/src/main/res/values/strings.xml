@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Motorrad Cluster</string>
+    <string name="app_shortName">Motorrad Cluster</string>
+    <!-- Image descriptions -->
+    <string name="image_left_arrow">Left Signal</string>
+    <string name="image_high_beams">High Beams</string>
+    <string name="image_heated_grips">Heated Grips</string>
+    <string name="image_abs">ABS Status</string>
+    <string name="image_kill_switch">Kill Switch</string>
+    <string name="image_fuel_warning">Fuel Warning</string>
+    <string name="image_bluetooth">Bluetooth Status</string>
+    <string name="image_right_arrow">Right Signal</string>
+    <string name="image_fuel_gauge">Fuel Gauge</string>
+    <string name="image_esa">ESA Status</string>
+    <!-- Menu items -->
+    <string name="action_settings">Settings</string>
+    <string name="action_about">About</string>
+    <string name="action_exit">Exit</string>
+    <!-- Preference strings -->
+    <string name="ui_title">User Interface</string>
+    <string name="pref_infoview_name">Current Info View</string>
+    <string-array name="infoview_array">
+        <item name="1">RPM</item>
+        <item name="2">Bearing</item>
+        <item name="3">TPMS</item>
+    </string-array>
+    <string-array name="infoview_arrayValues">
+        <item name="1">0</item>
+        <item name="2">1</item>
+        <item name="3">2</item>
+    </string-array>
+    <string name="pref_tempf_name">Temperature Unit</string>
+    <string-array name="tempf_array">
+        <item name="1">Fahrenheit</item>
+        <item name="2">Celsius</item>
+    </string-array>
+    <string-array name="tempf_arrayValues">
+        <item name="1">0</item>
+        <item name="2">1</item>
+    </string-array>
+    <string name="pref_distance_name">Distance Unit</string>
+    <string-array name="distance_array">
+        <item name="1">Imperial</item>
+        <item name="2">Metric</item>
+    </string-array>
+    <string-array name="distance_arrayValues">
+        <item name="1">0</item>
+        <item name="2">1</item>
+    </string-array>
+    <string name="pref_nightMode_name">Night Mode</string>
+    <string name="pref_nightMode_summary">Enable Night Mode, Disables Auto Night Mode</string>
+    <string name="pref_autoNightMode_name">Auto Night Mode</string>
+    <string name="pref_autoNightMode_summary">Enable Auto Night Mode (Requires light sensor)</string>
+    <string name="pref_autoNightModeDelay_name">Auto Night Mode Delay In Seconds</string>
+    <string name="pref_autoNightModeDelay_summary">Set Auto Night Mode Delay In Seconds</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="pref_fuelWarning_name">Fuel Warning</string>
+    <string name="pref_fuelWarning_summary">Percent at which to warn of low fuel</string>
+    <string name="pref_fuelStations_name">Fuel Station Suggestion</string>
+    <string-array name="fuel_array">
+        <item name="1">Nothing</item>
+        <item name="2">Nearby fuel stations</item>
+        <item name="3">Route to nearest fuel station</item>
+    </string-array>
+    <string-array name="fuel_arrayValues">
+        <item name="1">0</item>
+        <item name="2">1</item>
+        <item name="3">2</item>
+    </string-array>
+    <string name="advanced_settings_title">Advanced Settings</string>
+    <string name="pref_dataLogging_name">Data Logging</string>
+    <string name="pref_dataLogging_summary">Enable Data Logging To /sdcard/mCluster/</string>
+    <!-- Setup message alert dialog -->
+    <string name="alert_setup_title">Setup Instructions</string>
+    <string name="alert_setup_message">You will need to first pair your device to the CANBusGateway.</string>
+    <string name="alert_setup_button">OK</string>
+    <string name="alert_about_title">About</string>
+    <string name="alert_about_button">OK</string>
+    <!-- Setup message fuel station recommendations -->
+    <string name="alert_fuel_stations_title">Open Google Maps</string>
+    <string name="alert_fuel_stations_message_suggestions">Show nearby fuel stations?</string>
+    <string name="alert_fuel_stations_message_navigation">Navigate to nearest fuel station?</string>
+    <string name="alert_fuel_stations_button_positive">Yes</string>
+    <string name="alert_fuel_stations_button_negative">No</string>
+    <!-- Toast messages -->
+    <string name="toast_noPaired">No previously paired CANBusGateway found</string>
+    <string name="toast_connectedTo">Connected to:</string>
+    <!-- Misc messages -->
+    <string name="fuel_alert_begin">Fuel level is at </string>
+    <string name="fuel_alert_end"> percent.</string>
+</resources>
