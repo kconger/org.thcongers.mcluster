@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/layoutApp"
@@ -72,6 +73,16 @@
             android:layout_gravity="center" />
 
         <ImageButton
+            android:contentDescription="@string/image_tpms"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@mipmap/tpms_alert"
+            android:id="@+id/imageButtonTPMS"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:background="@null" />
+
+        <ImageButton
             android:contentDescription="@string/image_bluetooth"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -138,7 +149,7 @@
                     android:id="@+id/textViewSpeed"
                     android:paddingStart="20dp"
                     android:paddingEnd="20dp"
-                    android:gravity="center_vertical"
+                    android:gravity="center_vertical|center_horizontal"
                     android:textSize="120sp"
                     android:textIsSelectable="true"
                     android:textStyle="normal" />
@@ -163,18 +174,30 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@drawable/rectangle_bordered">
-
-            <TextView
+            <LinearLayout
+                android:id="@+id/layoutInfo"
+                android:orientation="horizontal"
                 android:layout_width="270dp"
-                android:layout_height="match_parent"
-                android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text=""
-                android:id="@+id/textViewInfo"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:gravity="bottom"
-                android:paddingBottom="20dp"
-                android:textSize="30sp"/>
+                android:layout_height="match_parent">
+                <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                    android:id="@+id/layoutInfoOther"
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:textAppearance="?android:attr/textAppearanceLarge"
+                        android:text="- RPM"
+                        android:id="@+id/textViewInfo"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="20dp"
+                        android:gravity="center|bottom"
+                        android:paddingBottom="20dp"
+                        android:textSize="40sp"/>
+                </LinearLayout>
+            </LinearLayout>
 
             <RelativeLayout
                 android:id="@+id/layoutFuelLevel"
@@ -258,6 +281,14 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:src="@mipmap/blank_icon" />
+            <ImageButton
+                android:contentDescription="@string/image_preference"
+                android:layout_width="55dp"
+                android:layout_height="match_parent"
+                android:src="@mipmap/cog"
+                android:id="@+id/imageButtonPreference"
+                android:background="@null"
+                android:layout_gravity="center" />
         </LinearLayout>
 
     </LinearLayout>

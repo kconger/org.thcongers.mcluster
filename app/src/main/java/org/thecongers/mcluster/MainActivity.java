@@ -32,6 +32,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -39,17 +40,19 @@ import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
+import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -59,13 +62,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
-public class MainActivity extends ActionBarActivity {
-
-    private SharedPreferences sharedPrefs;
+public class MainActivity extends FragmentActivity {
 
     private View root;
     private LinearLayout layoutIcons;
@@ -83,38 +85,70 @@ public class MainActivity extends ActionBarActivity {
     private ImageView imageFuelLevel;
     private ImageView imageESA;
     private TextView txtInfo;
+    private TextView txtFrontTPMS;
+    private TextView txtRearTPMS;
     private TextView txtSpeed;
     private TextView txtSpeedUnit;
     private TextView txtGear;
     private TextView txtOdometers;
     private TextView txtESA;
+    private ImageButton imageButtonTPMS;
     private ImageButton imageButtonBluetooth;
+    private ImageButton imageButtonPreference;
     private ProgressBar progressFuelLevel;
     private int background;
     private int backgroundDark;
-
+    private SharedPreferences sharedPrefs;
     private BluetoothAdapter btAdapter = null;
-    // SPP UUID service
     private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final String TAG = "mCluster";
-    private final int RECEIVE_MESSAGE = 1;		// Status for Handler
+    private final int RECEIVE_MESSAGE = 1;
     private static final int SETTINGS_RESULT = 1;
     private String address;
     static boolean hasSensor = false;
     private boolean itsDark = false;
     boolean btnPressed = false;
     private boolean fuelAlertTriggered = false;
+    private long alertTimer = 0;
     private long darkTimer = 0;
     private long lightTimer = 0;
+    String lastStatus;
+    private int frontPressurePSI = 0;
+    private int rearPressurePSI = 0;
+    private int frontStatus = 0;
+    private int rearStatus = 3;
     private LogData logger = null;
     private static Handler canBusMessages;
-    private ConnectThread btConnectThread;
+    private static Handler sensorMessages;
+    private canBusConnectThread canBusConnectThread;
+    private iTPMSConnectThread iTPMSConnectThread;
     private TextToSpeech text2speech;
-    float[] gravity;
-    float[] geomagnetic;
+    /*
+    * time smoothing constant for low-pass filter
+    * 0 ≤ alpha ≤ 1 ; a smaller value basically means more smoothing
+    * was 0.15f
+    * See: http://en.wikipedia.org/wiki/Low-pass_filter#Discrete-time_realization
+    */
+    static final float ALPHA = 0.05f;
+    float[] gravity = new float[3];
+    float[] geomagnetic = new float[3];
+
+    // Setup TTS
+    public void onInit(int initStatus) {
+        if (initStatus == TextToSpeech.SUCCESS) {
+            if (text2speech.isLanguageAvailable(Locale.US) == TextToSpeech.LANG_AVAILABLE)
+                text2speech.setLanguage(Locale.US);
+        } else if (initStatus == TextToSpeech.ERROR) {
+            Log.d(TAG, "Text to Speech startup failed...");
+        }
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Keep screen on
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.activity_main);
         setTitle(R.string.app_name);
@@ -135,13 +169,14 @@ public class MainActivity extends ActionBarActivity {
         imageFuelWarning = (ImageView) findViewById(R.id.imageViewFuelWarning);
         imageFuelLevel = (ImageView) findViewById(R.id.imageViewFuelLevel);
         imageESA = (ImageView) findViewById(R.id.imageViewESA);
-        txtInfo = (TextView) findViewById(R.id.textViewInfo);
         txtSpeed = (TextView) findViewById(R.id.textViewSpeed);
         txtSpeedUnit = (TextView) findViewById(R.id.textViewSpeedUnit);
         txtGear = (TextView) findViewById(R.id.textViewGear);
         txtOdometers = (TextView) findViewById(R.id.textViewOdometer);
         txtESA = (TextView) findViewById(R.id.textViewESA);
+        imageButtonTPMS = (ImageButton) findViewById(R.id.imageButtonTPMS);
         imageButtonBluetooth = (ImageButton) findViewById(R.id.imageButtonBluetooth);
+        imageButtonPreference = (ImageButton) findViewById(R.id.imageButtonPreference);
         progressFuelLevel = (ProgressBar) findViewById(R.id.progressBarFuelLevel);
 
         // Backgrounds
@@ -150,8 +185,22 @@ public class MainActivity extends ActionBarActivity {
 
         sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        // Keep screen on
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // Update layout
+        updateLayout();
+
+        if (!sharedPrefs.getBoolean("prefEnableTPMS", false)) {
+            imageButtonTPMS.setImageResource(R.mipmap.blank_icon);
+            imageButtonTPMS.setEnabled(false);
+        } else {
+            imageButtonTPMS.setImageResource(R.mipmap.tpms_alert);
+            imageButtonTPMS.setEnabled(true);
+        }
+
+        // Set initial color scheme
+        updateColors();
+        if (sharedPrefs.getBoolean("prefNightMode", false)) {
+            imageHeatedGrips.setImageResource(R.mipmap.heated_grips_high_dark);
+        }
 
         // Watch for Bluetooth Changes
         IntentFilter filter1 = new IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED);
@@ -171,50 +220,76 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
-        gravity = new float[3];
-        geomagnetic = new float[3];
-
-        // Set initial color scheme
-        if (!sharedPrefs.getBoolean("prefNightMode", false)) {
-            root.setBackgroundColor(getResources().getColor(android.R.color.white));
-            layoutIcons.setBackgroundResource(background);
-            layoutMiddleLeft.setBackgroundResource(background);
-            txtGear.setBackgroundResource(background);
-            layoutMiddleRight.setBackgroundResource(background);
-            progressFuelLevel.setBackgroundResource(background);
-            layoutBottomLeft.setBackgroundResource(background);
-            layoutBottomRight.setBackgroundResource(background);
-            txtInfo.setTextColor(getResources().getColor(android.R.color.black));
-            txtSpeed.setTextColor(getResources().getColor(android.R.color.black));
-            txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.black));
-            txtGear.setTextColor(getResources().getColor(android.R.color.black));
-            txtOdometers.setTextColor(getResources().getColor(android.R.color.black));
-            txtESA.setTextColor(getResources().getColor(android.R.color.black));
-            imageFuelLevel.setImageResource(R.mipmap.fuel_icon);
-            imageHeatedGrips.setImageResource(R.mipmap.heated_grips_high);
-        } else {
-            root.setBackgroundColor(getResources().getColor(android.R.color.black));
-            layoutIcons.setBackgroundResource(backgroundDark);
-            layoutMiddleLeft.setBackgroundResource(backgroundDark);
-            txtGear.setBackgroundResource(backgroundDark);
-            layoutMiddleRight.setBackgroundResource(backgroundDark);
-            progressFuelLevel.setBackgroundResource(backgroundDark);
-            layoutBottomLeft.setBackgroundResource(backgroundDark);
-            layoutBottomRight.setBackgroundResource(backgroundDark);
-            txtInfo.setTextColor(getResources().getColor(android.R.color.white));
-            txtSpeed.setTextColor(getResources().getColor(android.R.color.white));
-            txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.white));
-            txtGear.setTextColor(getResources().getColor(android.R.color.white));
-            txtOdometers.setTextColor(getResources().getColor(android.R.color.white));
-            txtESA.setTextColor(getResources().getColor(android.R.color.white));
-            imageFuelLevel.setImageResource(R.mipmap.fuel_icon_dark);
-            imageHeatedGrips.setImageResource(R.mipmap.heated_grips_high_dark);
-        }
-
         imageButtonBluetooth.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                btConnect();
+                canBusConnect();
+            }
+        });
+
+        imageButtonTPMS.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (sharedPrefs.getBoolean("prefEnableTPMS", false)) {
+                    iTPMSConnect();
+                }
+            }
+        });
+
+        imageButtonPreference.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                PopupMenu popup = new PopupMenu(MainActivity.this, v);
+                popup.getMenuInflater().inflate(R.menu.main, popup.getMenu());
+                popup.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        switch (item.getItemId()) {
+                            case R.id.action_settings:
+                                // Settings Menu was selected
+                                Intent i = new Intent(getApplicationContext(), org.thecongers.mcluster.UserSettingActivity.class);
+                                startActivityForResult(i, SETTINGS_RESULT);
+                                return true;
+                            case R.id.action_about:
+                                // About was selected
+                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                                builder.setTitle(getResources().getString(R.string.alert_about_title));
+                                builder.setMessage(readRawTextFile(MainActivity.this, R.raw.about));
+                                builder.setPositiveButton(getResources().getString(R.string.alert_about_button), null);
+                                builder.show();
+                                return true;
+                            case R.id.action_exit:
+                                // Exit menu item was selected
+                                if (logger != null) {
+                                    logger.shutdown();
+                                }
+                                finish();
+                                System.exit(0);
+                            default:
+                                return true;
+                        }
+                    }
+                });
+
+                popup.show();
+            }
+        });
+
+        layoutMiddleRight.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int infoViewCurr = Integer.valueOf(sharedPrefs.getString("prefInfoView", "0"));
+                if (infoViewCurr < 2) {
+                    infoViewCurr = infoViewCurr + 1;
+                } else {
+                    infoViewCurr = 0;
+                }
+                SharedPreferences.Editor editor = sharedPrefs.edit();
+                editor.putString("prefInfoView", String.valueOf(infoViewCurr));
+                editor.commit();
+
+                //update layout
+                updateLayout();
             }
         });
 
@@ -243,8 +318,9 @@ public class MainActivity extends ActionBarActivity {
                                 //RPM
                                 if (sharedPrefs.getString("prefInfoView", "0").contains("0")) {
                                     int rpm = (Integer.parseInt(splitMessage[4], 16) * 255 + Integer.parseInt(splitMessage[3], 16)) / 4;
+                                    txtInfo = (TextView) findViewById(R.id.textViewInfo);
                                     txtInfo.setGravity(Gravity.CENTER | Gravity.BOTTOM);
-                                    txtInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+                                    txtInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 40);
                                     txtInfo.setText(Integer.toString(rpm) + " RPM");
                                     if (rpm > 8500) {
                                         txtInfo.setTextColor(getResources().getColor(R.color.red));
@@ -369,10 +445,11 @@ public class MainActivity extends ActionBarActivity {
                                         SharedPreferences.Editor editor = sharedPrefs.edit();
                                         editor.putString("prefInfoView", String.valueOf(infoButton));
                                         editor.commit();
-                                        btnPressed = true;
-                                        Log.d(TAG,"Button Pressed, prefInfoView=" + String.valueOf(infoButton));
-                                    }
 
+                                        //update layout
+                                        updateLayout();
+                                        btnPressed = true;
+                                    }
                                 }else if (infoButtonValue.contains("6")){
                                     //Long Press
                                 }else{
@@ -554,7 +631,6 @@ public class MainActivity extends ActionBarActivity {
                                     txtESA.setText("");
                                     imageESA.setImageResource(R.mipmap.blank_icon);
                                 }
-                                //Log.d(TAG,"Preload: " + esaPreLoadValue + " Dampening: " + esaDampingValue1 + "," + esaDampingValue2);
 
                                 //Fuel Level
                                 double fuelLevelPercent = (Integer.parseInt(splitMessage[4], 16) / 255.0) * 100.0;
@@ -572,7 +648,7 @@ public class MainActivity extends ActionBarActivity {
                                         fuelAlertTriggered = true;
                                         //Audio Warning
                                         String fuelAlert = getResources().getString(R.string.fuel_alert_begin) + String.valueOf((int) Math.round(fuelLevelPercent)) + getResources().getString(R.string.fuel_alert_end);
-                                        text2speech.speak(fuelAlert, TextToSpeech.QUEUE_FLUSH, null);
+                                        speakString(fuelAlert);
                                         //Suggest nearby fuel stations
                                         if (!sharedPrefs.getString("prefFuelStation", "0").contains("0")) {
                                             // Display prompt to open google maps
@@ -635,6 +711,172 @@ public class MainActivity extends ActionBarActivity {
             }
         };
 
+        sensorMessages = new Handler() {
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case RECEIVE_MESSAGE:
+                        // Message received
+                        Log.d(TAG, "iTPMS Message Received, Length: " + msg.arg1);
+                        // Check to see if message is the correct size
+                        if (msg.arg1 == 13) {
+                            byte[] readBuf = (byte[]) msg.obj;
+
+                            // Validate against checksum
+                            int calculatedCheckSum = readBuf[4] + readBuf[5] + readBuf[6] + readBuf[7] + readBuf[8] + readBuf[9] + readBuf[10];
+                            if (calculatedCheckSum == readBuf[11]){
+                                // Convert to hex
+                                String[] hexData = new String[13];
+                                StringBuilder sbhex = new StringBuilder();
+                                for (int i = 0; i < msg.arg1; i++) {
+                                    hexData[i] = String.format("%02X", readBuf[i]);
+                                    sbhex.append(hexData[i]);
+                                }
+
+                                // Get sensor position
+                                String position = hexData[3];
+                                // Get sensor ID
+                                StringBuilder sensorID = new StringBuilder();
+                                sensorID.append(hexData[4]);
+                                sensorID.append(hexData[5]);
+                                sensorID.append(hexData[6]);
+                                sensorID.append(hexData[7]);
+
+                                // Only parse message if there is one or more sensor mappings
+                                String prefFrontID = sharedPrefs.getString("prefFrontID", "");
+                                String prefRearID = sharedPrefs.getString("prefRearID", "");
+                                try {
+                                    // Get temperature
+                                    int tempC = Integer.parseInt(hexData[8], 16) - 50;
+                                    double temp = tempC;
+                                    String temperatureUnit = "C";
+                                    // Get tire pressure
+                                    int psi = Integer.parseInt(hexData[9], 16);
+                                    double pressure = psi;
+                                    String pressureUnit = "psi";
+                                    // Get battery voltage
+                                    double voltage = Integer.parseInt(hexData[10], 16) / 50;
+                                    // Get pressure thresholds
+                                    int lowPressure = Integer.parseInt(sharedPrefs.getString("prefLowPressure", "30"));
+                                    int highPressure = Integer.parseInt(sharedPrefs.getString("prefHighPressure", "46"));
+                                    if (sharedPrefs.getString("preftempf", "0").contains("0")) {
+                                        // F
+                                        temp = (9.0 / 5.0) * tempC + 32.0;
+                                        temperatureUnit = "F";
+                                    }
+                                    int formattedTemperature = (int) (temp + 0.5d);
+                                    String pressureFormat = sharedPrefs.getString("prefpressuref", "0");
+                                    if (pressureFormat.contains("1")) {
+                                        // KPa
+                                        pressure = psi * 6.894757293168361;
+                                        pressureUnit = "KPa";
+                                    } else if (pressureFormat.contains("2")) {
+                                        // Kg-f
+                                        pressure = psi * 0.070306957965539;
+                                        pressureUnit = "Kg-f";
+                                    } else if (pressureFormat.contains("3")) {
+                                        // Bar
+                                        pressure = psi * 0.0689475729;
+                                        pressureUnit = "Bar";
+                                    }
+                                    int formattedPressure = (int) (pressure + 0.5d);
+                                    // Get checksum
+                                    String checksum = hexData[11];
+
+                                    //Log.d(TAG, "Sensor ID: " + sensorID.toString() + ", Sensor Position: " + position + ", Temperature(" + temperatureUnit + "): " + String.valueOf(temp) + ", Pressure(" + pressureUnit + "): " + String.valueOf(pressure) + ", Voltage: " + String.valueOf(voltage) + ", Checksum: " + checksum + ", Data: " + sbhex.toString() + ", Bytes:" + msg.arg1);
+                                    if (!sharedPrefs.getBoolean("prefDataLogging", false) && (logger != null)) {
+                                        logger.write("iTPMS MSG: Sensor ID: " + sensorID.toString() + ", Sensor Position: " + position + ", Temperature(" + temperatureUnit + "): " + String.valueOf(temp) + ", Pressure(" + pressureUnit + "): " + String.valueOf(pressure) + ", Voltage: " + String.valueOf(voltage) + ", Checksum: " + checksum + ", Data: " + sbhex.toString() + ", Bytes:" + msg.arg1);
+                                    }
+
+                                    if (Integer.parseInt(hexData[3], 16) <= 2) {
+                                        Log.d(TAG, "Front ID matched: " + Integer.parseInt(hexData[3], 16));
+
+                                        frontPressurePSI = psi;
+                                        // Set front tire status
+                                        if (psi <= lowPressure) {
+                                            frontStatus = 1;
+                                        } else if (psi >= highPressure) {
+                                            frontStatus = 2;
+                                        } else {
+                                            frontStatus = 0;
+                                        }
+                                        if (sharedPrefs.getString("prefInfoView", "0").contains("2")) {
+                                            txtFrontTPMS = (TextView) findViewById(R.id.textViewFrontTPMS);
+                                            txtFrontTPMS.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50);
+                                            txtFrontTPMS.setText(String.valueOf(formattedPressure) + " " + pressureUnit);
+                                        }
+                                    } else if (Integer.parseInt(hexData[3], 16) > 2) {
+                                        Log.d(TAG, "Rear ID matched: " + Integer.parseInt(hexData[3], 16));
+
+                                        rearPressurePSI = psi;
+                                        // Set rear tire status
+                                        if (psi <= lowPressure) {
+                                            rearStatus = 4;
+                                        } else if (psi >= highPressure) {
+                                            rearStatus = 5;
+                                        } else {
+                                            rearStatus = 3;
+                                        }
+                                        if (sharedPrefs.getString("prefInfoView", "0").contains("2")) {
+                                            txtRearTPMS = (TextView) findViewById(R.id.textViewRearTPMS);
+                                            txtRearTPMS.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50);
+                                            txtRearTPMS.setText(String.valueOf(formattedPressure) + " " + pressureUnit);
+                                        }
+                                    }
+                                    // Reset icon
+                                    if ((frontStatus == 0) && (rearStatus == 3)){
+                                        imageButtonTPMS.setImageResource(R.mipmap.tpms_on);
+                                    }
+                                    if ((frontStatus != 0) || (rearStatus != 3)) {
+                                        imageButtonTPMS.setImageResource(R.mipmap.tpms_alert);
+                                        SharedPreferences.Editor editor = sharedPrefs.edit();
+                                        editor.putString("prefInfoView", String.valueOf(2));
+                                        editor.commit();
+
+                                        updateLayout();
+
+                                        int delay = (Integer.parseInt(sharedPrefs.getString("prefAudioAlertDelay", "30")) * 1000);
+                                        String currStatus = (String.valueOf(frontStatus) + String.valueOf(rearStatus));
+                                        if (alertTimer == 0) {
+                                            alertTimer = System.currentTimeMillis();
+                                        } else {
+                                            long currentTime = System.currentTimeMillis();
+                                            long duration = (currentTime - alertTimer);
+                                            if (!currStatus.equals(lastStatus) || duration >= delay)
+                                            {
+                                                alertTimer = 0;
+                                                if ((frontStatus == 1) && (rearStatus == 3)) {
+                                                    speakString(getResources().getString(R.string.alert_lowFrontPressure));
+                                                } else if ((frontStatus == 2) && (rearStatus == 3)) {
+                                                    speakString(getResources().getString(R.string.alert_highFrontPressure));
+                                                } else if ((rearStatus == 4) && (frontStatus == 0)) {
+                                                    speakString(getResources().getString(R.string.alert_lowRearPressure));
+                                                } else if ((rearStatus == 5) && (frontStatus == 0)) {
+                                                    speakString(getResources().getString(R.string.alert_highRearPressure));
+                                                } else if ((frontStatus == 1) && (rearStatus == 4)) {
+                                                    speakString(getResources().getString(R.string.alert_lowFrontLowRearPressure));
+                                                } else if ((frontStatus == 2) && (rearStatus == 5)) {
+                                                    speakString(getResources().getString(R.string.alert_highFrontHighRearPressure));
+                                                } else if ((frontStatus == 1) && (rearStatus == 5)) {
+                                                    speakString(getResources().getString(R.string.alert_lowFrontHighRearPressure));
+                                                } else if ((frontStatus == 2) && (rearStatus == 4)) {
+                                                    speakString(getResources().getString(R.string.alert_highFrontLowRearPressure));
+                                                }
+                                                lastStatus = (String.valueOf(frontStatus) + String.valueOf(rearStatus));
+                                            }
+                                        }
+                                    }
+                                } catch (NumberFormatException e) {
+                                    Log.d(TAG, "Malformed message, unexpected value");
+                                }
+                            }
+                        } else {
+                            Log.d(TAG, "Malformed message, message length: " + msg.arg1);
+                        }
+                        break;
+                }
+            }
+        };
+
         // Sensor Stuff
         SensorManager sensorManager
                 = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
@@ -654,11 +896,15 @@ public class MainActivity extends ActionBarActivity {
         sensorManager.registerListener(sensorEventListener, magnetometer, SensorManager.SENSOR_DELAY_UI);
 
         // Try to connect to CANBusGateway
-        btConnect();
+        canBusConnect();
+        // Connect to iTPMS if enabled
+        if (sharedPrefs.getBoolean("prefEnableTPMS", false)) {
+            iTPMSConnect();
+        }
     }
 
     @Override
-    protected void onStop()
+    protected void onDestroy()
     {
         try {
             unregisterReceiver(btReceiver);
@@ -669,46 +915,7 @@ public class MainActivity extends ActionBarActivity {
             text2speech.stop();
             text2speech.shutdown();
         }
-        super.onStop();
-    }
-
-    //Draw options menu
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
-        // Inflate the menu
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    // When options menu item is selected
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item)
-    {
-        switch (item.getItemId()) {
-            case R.id.action_settings:
-                // Settings Menu was selected
-                Intent i = new Intent(getApplicationContext(), org.thecongers.mcluster.UserSettingActivity.class);
-                startActivityForResult(i, SETTINGS_RESULT);
-                return true;
-            case R.id.action_about:
-                // About was selected
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle(getResources().getString(R.string.alert_about_title));
-                builder.setMessage(readRawTextFile(this, R.raw.about));
-                builder.setPositiveButton(getResources().getString(R.string.alert_about_button), null);
-                builder.show();
-                return true;
-            case R.id.action_exit:
-                // Exit menu item was selected
-                if (logger != null){
-                    logger.shutdown();
-                }
-                finish();
-                System.exit(0);
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+        super.onDestroy();
     }
 
     //Runs when settings are updated
@@ -731,43 +938,14 @@ public class MainActivity extends ActionBarActivity {
         }
 
         // Update Colors
-        if ((!itsDark) && (!sharedPrefs.getBoolean("prefNightMode", false))){
-            layoutIcons.setBackgroundResource(background);
-            layoutMiddleLeft.setBackgroundResource(background);
-            txtGear.setBackgroundResource(background);
-            layoutMiddleRight.setBackgroundResource(background);
-            progressFuelLevel.setBackgroundResource(background);
-            layoutBottomLeft.setBackgroundResource(background);
-            layoutBottomRight.setBackgroundResource(background);
-            root.setBackgroundColor(getResources().getColor(android.R.color.white));
-            txtInfo.setTextColor(getResources().getColor(android.R.color.black));
-            txtSpeed.setTextColor(getResources().getColor(android.R.color.black));
-            txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.black));
-            txtGear.setTextColor(getResources().getColor(android.R.color.black));
-            txtOdometers.setTextColor(getResources().getColor(android.R.color.black));
-            txtESA.setTextColor(getResources().getColor(android.R.color.black));
-            imageFuelLevel.setImageResource(R.mipmap.fuel_icon);
-        } else {
-            layoutIcons.setBackgroundResource(backgroundDark);
-            layoutMiddleLeft.setBackgroundResource(backgroundDark);
-            txtGear.setBackgroundResource(backgroundDark);
-            layoutMiddleRight.setBackgroundResource(backgroundDark);
-            progressFuelLevel.setBackgroundResource(backgroundDark);
-            layoutBottomLeft.setBackgroundResource(backgroundDark);
-            layoutBottomRight.setBackgroundResource(backgroundDark);
-            root.setBackgroundColor(getResources().getColor(android.R.color.black));
-            txtInfo.setTextColor(getResources().getColor(android.R.color.white));
-            txtSpeed.setTextColor(getResources().getColor(android.R.color.white));
-            txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.white));
-            txtGear.setTextColor(getResources().getColor(android.R.color.white));
-            txtOdometers.setTextColor(getResources().getColor(android.R.color.white));
-            txtESA.setTextColor(getResources().getColor(android.R.color.white));
-            imageFuelLevel.setImageResource(R.mipmap.fuel_icon_dark);
-        }
+        updateColors();
+
+        //update layout
+        updateLayout();
     }
 
     // Connect to CANBusGateway
-    private boolean btConnect() {
+    private boolean canBusConnect() {
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         checkBTState();
         if(btAdapter!=null) {
@@ -791,11 +969,50 @@ public class MainActivity extends ActionBarActivity {
             if (address != null){
                 // Set up a pointer to the remote node using it's address.
                 BluetoothDevice device = btAdapter.getRemoteDevice(address);
-                btConnectThread = new ConnectThread(device);
-                btConnectThread.start();
+                canBusConnectThread = new canBusConnectThread(device);
+                canBusConnectThread.start();
             } else {
                 Toast.makeText(MainActivity.this,
                         getResources().getString(R.string.toast_noPaired),
+                        Toast.LENGTH_LONG).show();
+                return false;
+            }
+            return true;
+        }
+        Log.d(TAG, "Bluetooth not supported");
+        return false;
+    }
+
+    // Connect to CANBusGateway
+    private boolean iTPMSConnect() {
+        btAdapter = BluetoothAdapter.getDefaultAdapter();
+        checkBTState();
+        if(btAdapter!=null) {
+            Set<BluetoothDevice> pairedDevices = btAdapter.getBondedDevices();
+            // If there are paired devices
+            if (pairedDevices.size() > 0) {
+                // Loop through paired devices
+                for (BluetoothDevice device : pairedDevices) {
+                    if (device.getName().contains("iTPMS")) {
+                        address = device.getAddress();
+                        Log.d(TAG, "Paired iTPMS found: " + device.getName() + " " + device.getAddress());
+                    }
+                }
+                if (address == null) {
+                    Toast.makeText(MainActivity.this,
+                            getResources().getString(R.string.toast_noPairedTPMS),
+                            Toast.LENGTH_LONG).show();
+                    return false;
+                }
+            }
+            if (address != null){
+                // Set up a pointer to the remote node using it's address.
+                BluetoothDevice device = btAdapter.getRemoteDevice(address);
+                iTPMSConnectThread = new iTPMSConnectThread(device);
+                iTPMSConnectThread.start();
+            } else {
+                Toast.makeText(MainActivity.this,
+                        getResources().getString(R.string.toast_noPairedTPMS),
                         Toast.LENGTH_LONG).show();
                 return false;
             }
@@ -826,16 +1043,31 @@ public class MainActivity extends ActionBarActivity {
 
             if ((BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) && (device.getName().contains("CANBusGateway"))) {
                 // Do something if connected
-                Log.d(TAG, "CANBusGateway Connected");
-                btConnect();
+                Log.d(TAG, "CANBusGateway Connected: ACL");
+                canBusConnect();
+            }
+            else if ((BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) && (device.getName().contains("iTPMS"))) {
+                // Do something if connected
+                Log.d(TAG, "iTPMS Connected: ACL");
+                iTPMSConnect();
             }
             else if ((BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) && (device.getName().contains("CANBusGateway"))) {
                 // Do something if disconnected
-                Log.d(TAG, "CANBusGateway Disconnected");
+                Log.d(TAG, "CANBusGateway Disconnected: ACL");
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         imageButtonBluetooth.setImageResource(R.mipmap.bluetooth_off);
+                    }
+                });
+            }
+            else if ((BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) && (device.getName().contains("iTPMS"))) {
+                // Do something if disconnected
+                Log.d(TAG, "iTPMS Disconnected: ACL");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageButtonTPMS.setImageResource(R.mipmap.tpms_alert);
                     }
                 });
             }
@@ -859,11 +1091,11 @@ public class MainActivity extends ActionBarActivity {
     }
 
     // Bluetooth Connect Thread
-    private class ConnectThread extends Thread {
+    private class canBusConnectThread extends Thread {
         private final BluetoothSocket btSocket;
         private final BluetoothDevice btDevice;
 
-        public ConnectThread(BluetoothDevice device) {
+        public canBusConnectThread(BluetoothDevice device) {
             // Use a temporary object that is later assigned to mmSocket,
             // because btSocket is final
             BluetoothSocket tmp = null;
@@ -913,7 +1145,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             // Do work to manage the connection (in a separate thread)
-            ConnectedThread btConnectedThread = new ConnectedThread(btSocket);
+            canBusConnectedThread btConnectedThread = new canBusConnectedThread(btSocket);
             btConnectedThread.start();
         }
 
@@ -928,10 +1160,10 @@ public class MainActivity extends ActionBarActivity {
     }
 
     // Connected bluetooth thread
-    private class ConnectedThread extends Thread {
+    private class canBusConnectedThread extends Thread {
         private final InputStream btInStream;
 
-        public ConnectedThread(BluetoothSocket socket) {
+        public canBusConnectedThread(BluetoothSocket socket) {
             InputStream tmpInput = null;
 
             // Get the input stream, using temp objects because member streams are final
@@ -972,7 +1204,112 @@ public class MainActivity extends ActionBarActivity {
                     }
                 } catch (IOException e) {
                     Log.d(TAG, "IO Exception while reading stream");
-                    btConnectThread.cancel();
+                    canBusConnectThread.cancel();
+                    canBusConnect();
+                    break;
+                }
+            }
+        }
+    }
+
+    // Bluetooth iTPMS Connect Thread
+    private class iTPMSConnectThread extends Thread {
+        private final BluetoothSocket btSocket;
+        private final BluetoothDevice btDevice;
+
+        public iTPMSConnectThread(BluetoothDevice device) {
+            // Use a temporary object that is later assigned to mmSocket,
+            // because btSocket is final
+            BluetoothSocket tmp = null;
+            btDevice = device;
+
+            // Get a BluetoothSocket to connect with the given BluetoothDevice
+            try {
+                tmp = createBluetoothSocket(device);
+            } catch (IOException e) {
+                Log.d(TAG,"Bluetooth socket create failed: " + e.getMessage() + ".");
+            }
+            btSocket = tmp;
+        }
+
+        public void run() {
+            // Cancel discovery because it will slow down the connection
+            btAdapter.cancelDiscovery();
+            Log.d(TAG, "Connecting to the iTPMS...");
+            try {
+                // Connect the device through the socket. This will block until it succeeds or
+                // throws an exception
+                btSocket.connect();
+
+                if (btSocket.isConnected()) {
+                    Log.d(TAG, "Connected to: " + btDevice.getName() + " " + btDevice.getAddress());
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            imageButtonTPMS.setImageResource(R.mipmap.tpms_on);
+                            Toast.makeText(MainActivity.this,
+                                    getResources().getString(R.string.toast_connectedTo) +
+                                            " " + btDevice.getName() + " " + btDevice.getAddress(),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            } catch (IOException connectException) {
+                // Unable to connect
+                Log.d(TAG, "Unable to connect to the iTPMS: " + connectException);
+                try {
+                    btSocket.close();
+                } catch (IOException closeException) {
+                    Log.d(TAG,"Unable to close socket during connection failure");
+                }
+
+                return;
+            }
+
+            // Do work to manage the connection (in a separate thread)
+            iTPMSConnectedThread btConnectedThread = new iTPMSConnectedThread(btSocket);
+            btConnectedThread.start();
+        }
+
+        // Cancel an in-progress connection, and close the socket
+        public void cancel() {
+            try {
+                btSocket.close();
+            } catch (IOException e) {
+                Log.d(TAG, "Unable to close Bluetooth socket");
+            }
+        }
+    }
+
+    // Connected bluetooth thread
+    private class iTPMSConnectedThread extends Thread {
+        private final InputStream btInStream;
+
+        public iTPMSConnectedThread(BluetoothSocket socket) {
+            InputStream tmpInput = null;
+
+            // Get the input stream, using temp objects because member streams are final
+            try {
+                tmpInput = socket.getInputStream();
+            } catch (IOException e) {
+                Log.d(TAG, "IO Exception getting input stream");
+            }
+            btInStream = tmpInput;
+        }
+
+        public void run() {
+            byte[] buffer = new byte[256];  // Buffer store for the stream
+            int bytes; // Bytes returned from read()
+
+            // Keep listening to the InputStream until an exception occurs
+            while (true) {
+                try {
+                    // Read from the InputStream
+                    bytes = btInStream.read(buffer); // Get number of bytes and message in "buffer"
+                    sensorMessages.obtainMessage(RECEIVE_MESSAGE, bytes, -1, buffer).sendToTarget(); // Send to message queue Handler
+                } catch (IOException e) {
+                    Log.d(TAG, "IO Exception while reading stream");
+                    iTPMSConnectThread.cancel();
                     break;
                 }
             }
@@ -998,6 +1335,180 @@ public class MainActivity extends ActionBarActivity {
             return null;
         }
         return text.toString();
+    }
+
+    public void updateLayout(){
+        if (sharedPrefs.getString("prefInfoView", "0").contains("0")) {
+            View otherLayout = findViewById(R.id.layoutInfoTPMS);
+            if (otherLayout != null ) {
+                ViewGroup parent = (ViewGroup) otherLayout.getParent();
+                parent.removeView(otherLayout);
+            }
+
+            LinearLayout infoOtherLayout = (LinearLayout) findViewById(R.id.layoutInfoOther);
+            if (infoOtherLayout == null) {
+                LinearLayout infoLayout = (LinearLayout) findViewById(R.id.layoutInfo);
+                View infoView = getLayoutInflater().inflate(R.layout.activity_main_info, infoLayout, false);
+                infoLayout.addView(infoView);
+
+            }
+
+            txtInfo = (TextView) findViewById(R.id.textViewInfo);
+            txtInfo.setGravity(Gravity.CENTER | Gravity.BOTTOM);
+            txtInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 40);
+            // Update Colors
+            if ((!itsDark) && (!sharedPrefs.getBoolean("prefNightMode", false))){
+                txtInfo.setTextColor(getResources().getColor(android.R.color.black));
+            } else {
+                txtInfo.setTextColor(getResources().getColor(android.R.color.white));
+            }
+            txtInfo.setText("- RPM");
+        } else if (sharedPrefs.getString("prefInfoView", "0").contains("1")) {
+            View otherLayout = findViewById(R.id.layoutInfoTPMS);
+            if (otherLayout != null ) {
+                ViewGroup parent = (ViewGroup) otherLayout.getParent();
+                parent.removeView(otherLayout);
+            }
+
+            LinearLayout infoOtherLayout = (LinearLayout) findViewById(R.id.layoutInfoOther);
+            if (infoOtherLayout == null) {
+                LinearLayout infoLayout = (LinearLayout) findViewById(R.id.layoutInfo);
+                View infoView = getLayoutInflater().inflate(R.layout.activity_main_info, infoLayout, false);
+                infoLayout.addView(infoView);
+
+            }
+
+            txtInfo = (TextView) findViewById(org.thecongers.mcluster.R.id.textViewInfo);
+            txtInfo.setGravity(Gravity.CENTER | Gravity.CENTER_VERTICAL);
+            txtInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 120);
+            // Update Colors
+            if ((!itsDark) && (!sharedPrefs.getBoolean("prefNightMode", false))){
+                txtInfo.setTextColor(getResources().getColor(android.R.color.black));
+            } else {
+                txtInfo.setTextColor(getResources().getColor(android.R.color.white));
+            }
+            txtInfo.setText("-");
+        } else if (sharedPrefs.getString("prefInfoView", "0").contains("2")) {
+            View otherLayout = findViewById(R.id.layoutInfoOther);
+            if (otherLayout != null ) {
+                ViewGroup parent = (ViewGroup) otherLayout.getParent();
+                parent.removeView(otherLayout);
+            }
+
+            LinearLayout infoTPMSLayout = (LinearLayout) findViewById(R.id.layoutInfoTPMS);
+            if (infoTPMSLayout == null) {
+                LinearLayout myLayout = (LinearLayout) findViewById(R.id.layoutInfo);
+                View infoView = getLayoutInflater().inflate(R.layout.activity_main_tpms, myLayout, false);
+                myLayout.addView(infoView);
+            }
+
+            String pressureUnit = "psi";
+            double frontPressure = frontPressurePSI;
+            double rearPressure = rearPressurePSI;
+            String pressureFormat = sharedPrefs.getString("prefpressuref", "0");
+            if (pressureFormat.contains("1")) {
+                // KPa
+                frontPressure = frontPressurePSI * 6.894757293168361;
+                rearPressure = rearPressurePSI * 6.894757293168361;
+                pressureUnit = "KPa";
+            } else if (pressureFormat.contains("2")) {
+                // Kg-f
+                frontPressure = frontPressurePSI * 0.070306957965539;
+                rearPressure = rearPressurePSI * 0.070306957965539;
+                pressureUnit = "Kg-f";
+            } else if (pressureFormat.contains("3")) {
+                // Bar
+                frontPressure = frontPressurePSI * 0.0689475729;
+                rearPressure = rearPressurePSI * 0.0689475729;
+                pressureUnit = "Bar";
+            }
+            int formattedFrontPressure = (int) (frontPressure + 0.5d);
+            int formattedRearPressure = (int) (rearPressure + 0.5d);
+            txtFrontTPMS = (TextView) findViewById(R.id.textViewFrontTPMS);
+            txtFrontTPMS.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50);
+            txtFrontTPMS.setText(formattedFrontPressure + " " + pressureUnit);
+            txtRearTPMS = (TextView) findViewById(R.id.textViewRearTPMS);
+            txtRearTPMS.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50);
+            txtRearTPMS.setText(formattedRearPressure + " " + pressureUnit);
+            // Update Colors
+            if ((!itsDark) && (!sharedPrefs.getBoolean("prefNightMode", false))){
+                txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.black));
+                txtRearTPMS.setTextColor(getResources().getColor(android.R.color.black));
+            } else {
+                txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.white));
+                txtRearTPMS.setTextColor(getResources().getColor(android.R.color.white));
+            }
+        }
+    }
+
+    // Update colors
+    public void updateColors(){
+        if ((!itsDark) && (!sharedPrefs.getBoolean("prefNightMode", false))){
+            layoutIcons.setBackgroundResource(background);
+            layoutMiddleLeft.setBackgroundResource(background);
+            txtGear.setBackgroundResource(background);
+            layoutMiddleRight.setBackgroundResource(background);
+            progressFuelLevel.setBackgroundResource(background);
+            layoutBottomLeft.setBackgroundResource(background);
+            layoutBottomRight.setBackgroundResource(background);
+            root.setBackgroundColor(getResources().getColor(android.R.color.white));
+            if (txtInfo != null) {
+                txtInfo.setTextColor(getResources().getColor(android.R.color.black));
+            } else if ((txtFrontTPMS != null) && (txtRearTPMS != null)){
+                txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.black));
+                txtRearTPMS.setTextColor(getResources().getColor(android.R.color.black));
+            }
+            txtSpeed.setTextColor(getResources().getColor(android.R.color.black));
+            txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.black));
+            txtGear.setTextColor(getResources().getColor(android.R.color.black));
+            txtOdometers.setTextColor(getResources().getColor(android.R.color.black));
+            txtESA.setTextColor(getResources().getColor(android.R.color.black));
+            imageFuelLevel.setImageResource(R.mipmap.fuel_icon);
+            imageButtonPreference.setImageResource(R.mipmap.cog);
+        } else {
+            layoutIcons.setBackgroundResource(backgroundDark);
+            layoutMiddleLeft.setBackgroundResource(backgroundDark);
+            txtGear.setBackgroundResource(backgroundDark);
+            layoutMiddleRight.setBackgroundResource(backgroundDark);
+            progressFuelLevel.setBackgroundResource(backgroundDark);
+            layoutBottomLeft.setBackgroundResource(backgroundDark);
+            layoutBottomRight.setBackgroundResource(backgroundDark);
+            root.setBackgroundColor(getResources().getColor(android.R.color.black));
+            if (txtInfo != null) {
+                txtInfo.setTextColor(getResources().getColor(android.R.color.white));
+            } else if ((txtFrontTPMS != null) && (txtRearTPMS != null)){
+                txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.white));
+                txtRearTPMS.setTextColor(getResources().getColor(android.R.color.white));
+            }
+            txtSpeed.setTextColor(getResources().getColor(android.R.color.white));
+            txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.white));
+            txtGear.setTextColor(getResources().getColor(android.R.color.white));
+            txtOdometers.setTextColor(getResources().getColor(android.R.color.white));
+            txtESA.setTextColor(getResources().getColor(android.R.color.white));
+            imageFuelLevel.setImageResource(R.mipmap.fuel_icon_dark);
+            imageButtonPreference.setImageResource(R.mipmap.cog_dark);
+        }
+    }
+
+    // speak the user text
+    public void speakString(String speech) {
+        HashMap<String, String> myHashAlarm = new HashMap();
+        myHashAlarm.put(TextToSpeech.Engine.KEY_PARAM_STREAM,
+                String.valueOf(AudioManager.STREAM_ALARM));
+        text2speech.speak(speech, TextToSpeech.QUEUE_FLUSH, myHashAlarm);
+    }
+
+    /*
+     * @see http://en.wikipedia.org/wiki/Low-pass_filter#Algorithmic_implementation
+     */
+    // Lowpass filter
+    protected float[] lowPass( float[] input, float[] output ) {
+        if ( output == null ) return input;
+
+        for ( int i=0; i<input.length; i++ ) {
+            output[i] = output[i] + ALPHA * (input[i] - output[i]);
+        }
+        return output;
     }
 
     // Listens for light sensor events
@@ -1027,22 +1538,8 @@ public class MainActivity extends ActionBarActivity {
                             if ((duration >= delay) && (!itsDark)) {
                                 itsDark = true;
                                 Log.d(TAG, "Its dark");
-                                // Redraw Screen
-                                root.setBackgroundColor(getResources().getColor(android.R.color.black));
-                                layoutIcons.setBackgroundResource(backgroundDark);
-                                layoutMiddleLeft.setBackgroundResource(backgroundDark);
-                                txtGear.setBackgroundResource(backgroundDark);
-                                layoutMiddleRight.setBackgroundResource(backgroundDark);
-                                progressFuelLevel.setBackgroundResource(backgroundDark);
-                                layoutBottomLeft.setBackgroundResource(backgroundDark);
-                                layoutBottomRight.setBackgroundResource(backgroundDark);
-                                txtInfo.setTextColor(getResources().getColor(android.R.color.white));
-                                txtSpeed.setTextColor(getResources().getColor(android.R.color.white));
-                                txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.white));
-                                txtGear.setTextColor(getResources().getColor(android.R.color.white));
-                                txtOdometers.setTextColor(getResources().getColor(android.R.color.white));
-                                txtESA.setTextColor(getResources().getColor(android.R.color.white));
-                                imageFuelLevel.setImageResource(R.mipmap.fuel_icon_dark);
+                                // Update colors
+                                updateColors();
                             }
                         }
                     } else {
@@ -1055,32 +1552,18 @@ public class MainActivity extends ActionBarActivity {
                             if ((duration >= delay) && (itsDark)) {
                                 itsDark = false;
                                 Log.d(TAG, "Its light");
-                                // Redraw Screen
-                                root.setBackgroundColor(getResources().getColor(android.R.color.white));
-                                layoutIcons.setBackgroundResource(background);
-                                layoutMiddleLeft.setBackgroundResource(background);
-                                txtGear.setBackgroundResource(background);
-                                layoutMiddleRight.setBackgroundResource(background);
-                                progressFuelLevel.setBackgroundResource(background);
-                                layoutBottomLeft.setBackgroundResource(background);
-                                layoutBottomRight.setBackgroundResource(background);
-                                txtInfo.setTextColor(getResources().getColor(android.R.color.black));
-                                txtSpeed.setTextColor(getResources().getColor(android.R.color.black));
-                                txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.black));
-                                txtGear.setTextColor(getResources().getColor(android.R.color.black));
-                                txtOdometers.setTextColor(getResources().getColor(android.R.color.black));
-                                txtESA.setTextColor(getResources().getColor(android.R.color.black));
-                                imageFuelLevel.setImageResource(R.mipmap.fuel_icon);
+                                // Update colors
+                                updateColors();
                             }
                         }
                     }
                 }
             }
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                gravity = event.values;
+                gravity = lowPass(event.values.clone(), gravity);
             }
             if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-                geomagnetic = event.values;
+                geomagnetic = lowPass(event.values.clone(), geomagnetic);
             }
             if (sharedPrefs.getString("prefInfoView", "0").contains("1")) {
                 if (gravity != null && geomagnetic != null) {
@@ -1093,8 +1576,8 @@ public class MainActivity extends ActionBarActivity {
                         String bearing = "-";
                         SensorManager.remapCoordinateSystem(R, SensorManager.AXIS_Y, SensorManager.AXIS_MINUS_X, remappedR);
                         SensorManager.getOrientation(remappedR, orientation);
-                        float azimut = orientation[0]; // orientation contains: azimut, pitch and roll
-                        float azimuthInDegress = (float) (Math.toDegrees(azimut) + 360) % 360;
+                        float azimuth = orientation[0]; // orientation contains: azimuth, pitch and roll
+                        float azimuthInDegress = (float) (Math.toDegrees(azimuth) + 360) % 360;
                         if (Math.round(azimuthInDegress) > 331 || Math.round(azimuthInDegress) <= 28) {
                             bearing = "N";
                         } else if (Math.round(azimuthInDegress) > 28 && Math.round(azimuthInDegress) <= 73) {
@@ -1112,8 +1595,9 @@ public class MainActivity extends ActionBarActivity {
                         } else if (Math.round(azimuthInDegress) > 298 && Math.round(azimuthInDegress) <= 331) {
                             bearing = "NW";
                         }
-                        txtInfo.setGravity(Gravity.CENTER | Gravity.BOTTOM);
-                        txtInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 100);
+                        txtInfo = (TextView) findViewById(org.thecongers.mcluster.R.id.textViewInfo);
+                        txtInfo.setGravity(Gravity.CENTER | Gravity.CENTER_VERTICAL);
+                        txtInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 120);
                         txtInfo.setText(bearing);
                     }
                 }

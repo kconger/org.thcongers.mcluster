@@ -22,6 +22,13 @@
             android:entryValues="@array/distance_arrayValues"
             android:defaultValue="0"
             />
+        <ListPreference
+            android:key="prefpressuref"
+            android:title="@string/pref_pressuref_name"
+            android:entries="@array/pressuref_array"
+            android:entryValues="@array/pressuref_arrayValues"
+            android:defaultValue="0"
+            />
         <CheckBoxPreference
             android:defaultValue="false"
             android:disableDependentsState="true"
@@ -44,7 +51,38 @@
             android:inputType="number"
             android:key="prefAutoNightModeDelay" />
     </PreferenceCategory>
+    <PreferenceCategory android:title="@string/tpms_settings_title" >
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:disableDependentsState="false"
+            android:key="prefEnableTPMS"
+            android:summary="@string/pref_enableTPMS_summary"
+            android:title="@string/pref_enableTPMS_name" >
+        </CheckBoxPreference>
+            <EditTextPreference
+                android:title="@string/pref_low_pressure_name"
+                android:summary="@string/pref_low_pressure_summary"
+                android:defaultValue="30"
+                android:inputType="number"
+                android:key="prefLowPressure"
+                android:dependency="prefEnableTPMS"
+                />
+            <EditTextPreference
+                android:title="@string/pref_high_pressure_name"
+                android:summary="@string/pref_high_pressure_summary"
+                android:defaultValue="46"
+                android:inputType="number"
+                android:key="prefHighPressure"
+                android:dependency="prefEnableTPMS"
+                />
+    </PreferenceCategory>
     <PreferenceCategory android:title="@string/notifications_title" >
+        <EditTextPreference
+            android:title="@string/pref_audioAlertDelay_name"
+            android:summary="@string/pref_audioAlertDelay_summary"
+            android:defaultValue="30"
+            android:inputType="number"
+            android:key="prefAudioAlertDelay" />
         <org.thecongers.mcluster.NumberPickerPreference
             android:defaultValue="30"
             android:summary="@string/pref_fuelWarning_summary"
