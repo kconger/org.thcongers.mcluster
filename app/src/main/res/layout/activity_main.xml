@@ -80,7 +80,8 @@
             android:id="@+id/imageButtonTPMS"
             android:layout_weight="1"
             android:layout_gravity="center"
-            android:background="@null" />
+            android:nextFocusForward="@+id/imageButtonBluetooth"
+            android:background="@drawable/button_focus" />
 
         <ImageButton
             android:contentDescription="@string/image_bluetooth"
@@ -90,7 +91,8 @@
             android:id="@+id/imageButtonBluetooth"
             android:layout_weight="1"
             android:layout_gravity="center"
-            android:background="@null" />
+            android:nextFocusForward="@+id/imageButtonPreference"
+            android:background="@drawable/button_focus" />
 
         <ImageView
             android:contentDescription="@string/image_right_arrow"
@@ -177,7 +179,8 @@
             <LinearLayout
                 android:id="@+id/layoutInfo"
                 android:orientation="horizontal"
-                android:layout_width="270dp"
+                android:layout_weight="1"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent">
                 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                     android:id="@+id/layoutInfoOther"
@@ -202,8 +205,8 @@
             <RelativeLayout
                 android:id="@+id/layoutFuelLevel"
                 android:orientation="vertical"
-                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
+                android:layout_width="55dp"
                 android:layout_gravity="right">
 
                 <ProgressBar
@@ -287,10 +290,10 @@
                 android:layout_height="match_parent"
                 android:src="@mipmap/cog"
                 android:id="@+id/imageButtonPreference"
-                android:background="@null"
+                android:background="@drawable/button_focus"
+                android:nextFocusForward="@+id/imageButtonTPMS"
                 android:layout_gravity="center" />
         </LinearLayout>
-
     </LinearLayout>
 
 </LinearLayout>

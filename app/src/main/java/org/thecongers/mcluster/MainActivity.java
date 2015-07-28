@@ -703,6 +703,7 @@ public class MainActivity extends FragmentActivity {
                                 }
                                 txtOdometers.setText(String.valueOf((int) Math.round(odometer)) + " " + odometerUnit);
                             }
+                            imageButtonBluetooth.setImageResource(R.mipmap.bluetooth_on);
                         } else {
                             Log.d(TAG, "Malformed message, message length: " + msg.arg1);
                         }
