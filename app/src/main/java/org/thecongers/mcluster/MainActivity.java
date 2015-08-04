@@ -639,22 +639,22 @@ public class MainActivity extends FragmentActivity {
                                 }
 
                                 //Fuel Level
-                                double fuelLevelPercent = ((Integer.parseInt(splitMessage[4], 16) - 29) / 226.0) * 100.0;
+                                double fuelLevelPercent = ((Integer.parseInt(splitMessage[4], 16) - 73) / 182.0) * 100.0;
                                 progressFuelLevel.setProgress((int) Math.round(fuelLevelPercent));
-                                //TODO: Remove
-                                Log.d(TAG,"Fuel: " + Integer.parseInt(splitMessage[4], 16));
 
                                 //Fuel Level Warning
                                 double fuelWarning = sharedPrefs.getInt("prefFuelWarning", 30);
-                                if (fuelLevelPercent > fuelWarning) {
+                                if (fuelLevelPercent >= fuelWarning) {
                                     imageFuelWarning.setImageResource(R.mipmap.blank_icon);
                                     fuelAlertTriggered = false;
                                     fuelReserveAlertTriggered = false;
                                 } else if (fuelLevelPercent == 0){
+                                    //Visual Warning
+                                    imageFuelWarning.setImageResource(R.mipmap.fuel_warning);
                                     if (!fuelReserveAlertTriggered) {
+                                        fuelReserveAlertTriggered = true;
                                         //Audio Warning
                                         speakString(getResources().getString(R.string.fuel_alert_reserve));
-                                        fuelReserveAlertTriggered = true;
                                     }
                                 } else {
                                     //Visual Warning
