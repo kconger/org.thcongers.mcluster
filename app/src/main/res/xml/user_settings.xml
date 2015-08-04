@@ -97,6 +97,14 @@
         </ListPreference>
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/advanced_settings_title" >
+        <ListPreference
+            android:key="prefWheelSize"
+            android:title="@string/pref_wheelSize_name"
+            android:summary="@string/pref_wheelSize_summary"
+            android:entries="@array/wheelSize_array"
+            android:entryValues="@array/wheelSize_arrayValues"
+            android:defaultValue="0"
+            />
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="prefDataLogging"

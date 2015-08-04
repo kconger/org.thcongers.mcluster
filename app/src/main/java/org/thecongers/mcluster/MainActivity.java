@@ -109,10 +109,12 @@ public class MainActivity extends FragmentActivity {
     private boolean itsDark = false;
     boolean btnPressed = false;
     private boolean fuelAlertTriggered = false;
+    private boolean fuelReserveAlertTriggered = true;
     private long alertTimer = 0;
     private long darkTimer = 0;
     private long lightTimer = 0;
     String lastStatus;
+    private int lastDirection;
     private int frontPressurePSI = 0;
     private int rearPressurePSI = 0;
     private int frontStatus = 0;
@@ -368,7 +370,11 @@ public class MainActivity extends FragmentActivity {
                             }else if (splitMessage[0].contains("294")){
                                 //Front Wheel Speed
                                 double frontSpeed = ((Integer.parseInt(splitMessage[4], 16) * 256.0 + Integer.parseInt(splitMessage[3], 16)) * 0.062);
-
+                                //If 21" Wheel
+                                if (sharedPrefs.getString("prefDistance", "0").contains("1")) {
+                                    //TODO: Adjust factor for 21 inch wheel
+                                    frontSpeed = ((Integer.parseInt(splitMessage[4], 16) * 256.0 + Integer.parseInt(splitMessage[3], 16)) * 0.062);
+                                }
                                 if (sharedPrefs.getString("prefDistance", "0").contains("0")) {
                                     speedUnit = "MPH";
                                     frontSpeed = frontSpeed / 1.609344;
@@ -633,15 +639,24 @@ public class MainActivity extends FragmentActivity {
                                 }
 
                                 //Fuel Level
-                                double fuelLevelPercent = (Integer.parseInt(splitMessage[4], 16) / 255.0) * 100.0;
+                                double fuelLevelPercent = ((Integer.parseInt(splitMessage[4], 16) - 29) / 226.0) * 100.0;
                                 progressFuelLevel.setProgress((int) Math.round(fuelLevelPercent));
+                                //TODO: Remove
+                                Log.d(TAG,"Fuel: " + Integer.parseInt(splitMessage[4], 16));
 
                                 //Fuel Level Warning
                                 double fuelWarning = sharedPrefs.getInt("prefFuelWarning", 30);
-                                if (fuelLevelPercent > fuelWarning){
+                                if (fuelLevelPercent > fuelWarning) {
                                     imageFuelWarning.setImageResource(R.mipmap.blank_icon);
                                     fuelAlertTriggered = false;
-                                }else {
+                                    fuelReserveAlertTriggered = false;
+                                } else if (fuelLevelPercent == 0){
+                                    if (!fuelReserveAlertTriggered) {
+                                        //Audio Warning
+                                        speakString(getResources().getString(R.string.fuel_alert_reserve));
+                                        fuelReserveAlertTriggered = true;
+                                    }
+                                } else {
                                     //Visual Warning
                                     imageFuelWarning.setImageResource(R.mipmap.fuel_warning);
                                     if (!fuelAlertTriggered){
@@ -1575,34 +1590,57 @@ public class MainActivity extends FragmentActivity {
                     if (success) {
                         float orientation[] = new float[3];
                         String bearing = "-";
-                        SensorManager.remapCoordinateSystem(R, SensorManager.AXIS_Y, SensorManager.AXIS_MINUS_X, remappedR);
+                        SensorManager.remapCoordinateSystem(R, SensorManager.AXIS_X, SensorManager.AXIS_Z, remappedR);
                         SensorManager.getOrientation(remappedR, orientation);
-                        float azimuth = orientation[0]; // orientation contains: azimuth, pitch and roll
-                        float azimuthInDegress = (float) (Math.toDegrees(azimuth) + 360) % 360;
-                        if (Math.round(azimuthInDegress) > 331 || Math.round(azimuthInDegress) <= 28) {
-                            bearing = "N";
-                        } else if (Math.round(azimuthInDegress) > 28 && Math.round(azimuthInDegress) <= 73) {
-                            bearing = "NE";
-                        } else if (Math.round(azimuthInDegress) > 73 && Math.round(azimuthInDegress) <= 118) {
-                            bearing = "E";
-                        } else if (Math.round(azimuthInDegress) > 118 && Math.round(azimuthInDegress) <= 163) {
-                            bearing = "SE";
-                        } else if (Math.round(azimuthInDegress) > 163 && Math.round(azimuthInDegress) <= 208) {
-                            bearing = "S";
-                        } else if (Math.round(azimuthInDegress) > 208 && Math.round(azimuthInDegress) <= 253) {
-                            bearing = "SW";
-                        } else if (Math.round(azimuthInDegress) > 253 && Math.round(azimuthInDegress) <= 298) {
-                            bearing = "W";
-                        } else if (Math.round(azimuthInDegress) > 298 && Math.round(azimuthInDegress) <= 331) {
-                            bearing = "NW";
+                        int direction = filterChange(normalizeDegrees(Math.toDegrees(orientation[0])));
+                        if((int)direction != (int)lastDirection) {
+                            lastDirection = (int) direction;
+                            Log.d(TAG, "Direction: " + direction);
+                            if (lastDirection > 331 || lastDirection <= 28) {
+                                bearing = "N";
+                            } else if (lastDirection > 28 && lastDirection <= 73) {
+                                bearing = "NE";
+                            } else if (lastDirection > 73 && lastDirection <= 118) {
+                                bearing = "E";
+                            } else if (lastDirection > 118 && lastDirection <= 163) {
+                                bearing = "SE";
+                            } else if (lastDirection > 163 && lastDirection <= 208) {
+                                bearing = "S";
+                            } else if (lastDirection > 208 && lastDirection <= 253) {
+                                bearing = "SW";
+                            } else if (lastDirection > 253 && lastDirection <= 298) {
+                                bearing = "W";
+                            } else if (lastDirection > 298 && lastDirection <= 331) {
+                                bearing = "NW";
+                            }
+                            txtInfo = (TextView) findViewById(org.thecongers.mcluster.R.id.textViewInfo);
+                            txtInfo.setGravity(Gravity.CENTER | Gravity.CENTER_VERTICAL);
+                            txtInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 120);
+                            txtInfo.setText(bearing);
                         }
-                        txtInfo = (TextView) findViewById(org.thecongers.mcluster.R.id.textViewInfo);
-                        txtInfo.setGravity(Gravity.CENTER | Gravity.CENTER_VERTICAL);
-                        txtInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 120);
-                        txtInfo.setText(bearing);
                     }
                 }
             }
         }
     };
+
+    //Normalize a degree from 0 to 360 instead of -180 to 180
+    private int normalizeDegrees(double rads){
+        return (int)((rads+360)%360);
+    }
+
+
+    private int filterChange(int newDir){
+        int change = newDir - lastDirection;
+        int circularChange = newDir-(lastDirection+360);
+        int smallestChange;
+        if(Math.abs(change) < Math.abs(circularChange)){
+            smallestChange = change;
+        }
+        else{
+            smallestChange = circularChange;
+        }
+        smallestChange = Math.max(Math.min(change,3),-3);
+        return lastDirection+smallestChange;
+    }
 }
