@@ -17,7 +17,8 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name="org.thecongers.mcluster.MainActivity"
-            android:screenOrientation="reverseLandscape">
+            android:screenOrientation="reverseLandscape"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

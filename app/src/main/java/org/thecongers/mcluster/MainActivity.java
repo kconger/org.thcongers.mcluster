@@ -327,6 +327,9 @@ public class MainActivity extends FragmentActivity {
                                     if (rpm > 8500) {
                                         txtInfo.setTextColor(getResources().getColor(R.color.red));
                                     }
+                                    else {
+                                        txtInfo.setTextColor(getResources().getColor(android.R.color.black));
+                                    }
                                 }
 
                                 //Kill Switch
@@ -369,11 +372,10 @@ public class MainActivity extends FragmentActivity {
 
                             }else if (splitMessage[0].contains("294")){
                                 //Front Wheel Speed
-                                double frontSpeed = ((Integer.parseInt(splitMessage[4], 16) * 256.0 + Integer.parseInt(splitMessage[3], 16)) * 0.062);
+                                double frontSpeed = ((Integer.parseInt(splitMessage[4], 16) * 256.0 + Integer.parseInt(splitMessage[3], 16)) * 0.063);
                                 //If 21" Wheel
                                 if (sharedPrefs.getString("prefDistance", "0").contains("1")) {
-                                    //TODO: Adjust factor for 21 inch wheel
-                                    frontSpeed = ((Integer.parseInt(splitMessage[4], 16) * 256.0 + Integer.parseInt(splitMessage[3], 16)) * 0.062);
+                                    frontSpeed = ((Integer.parseInt(splitMessage[4], 16) * 256.0 + Integer.parseInt(splitMessage[3], 16)) * 0.064);
                                 }
                                 if (sharedPrefs.getString("prefDistance", "0").contains("0")) {
                                     speedUnit = "MPH";
@@ -819,6 +821,11 @@ public class MainActivity extends FragmentActivity {
                                             txtFrontTPMS = (TextView) findViewById(R.id.textViewFrontTPMS);
                                             txtFrontTPMS.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50);
                                             txtFrontTPMS.setText(String.valueOf(formattedPressure) + " " + pressureUnit);
+                                            if (rearStatus != 0){
+                                                txtFrontTPMS.setTextColor(getResources().getColor(R.color.red));
+                                            } else {
+                                                txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.black));
+                                            }
                                         }
                                     } else if (Integer.parseInt(hexData[3], 16) > 2) {
                                         Log.d(TAG, "Rear ID matched: " + Integer.parseInt(hexData[3], 16));
@@ -836,6 +843,11 @@ public class MainActivity extends FragmentActivity {
                                             txtRearTPMS = (TextView) findViewById(R.id.textViewRearTPMS);
                                             txtRearTPMS.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50);
                                             txtRearTPMS.setText(String.valueOf(formattedPressure) + " " + pressureUnit);
+                                            if (rearStatus != 3){
+                                                txtRearTPMS.setTextColor(getResources().getColor(R.color.red));
+                                            } else {
+                                                txtRearTPMS.setTextColor(getResources().getColor(android.R.color.black));
+                                            }
                                         }
                                     }
                                     // Reset icon

@@ -121,7 +121,7 @@
     <!-- Misc messages -->
     <string name="fuel_alert_begin">Fuel level is at </string>
     <string name="fuel_alert_end"> percent</string>
-    <string name="fuel_alert_reserve">Fuel is now on reserve</string>
+    <string name="fuel_alert_reserve">You are now on reserve</string>
     <!-- Pressure alert messages -->
     <string name="alert_lowFrontPressure">Low front tire pressure</string>
     <string name="alert_highFrontPressure">High front tire pressure</string>
