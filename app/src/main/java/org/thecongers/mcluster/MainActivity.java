@@ -821,7 +821,7 @@ public class MainActivity extends FragmentActivity {
                                             txtFrontTPMS = (TextView) findViewById(R.id.textViewFrontTPMS);
                                             txtFrontTPMS.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50);
                                             txtFrontTPMS.setText(String.valueOf(formattedPressure) + " " + pressureUnit);
-                                            if (rearStatus != 0){
+                                            if (frontStatus != 0){
                                                 txtFrontTPMS.setTextColor(getResources().getColor(R.color.red));
                                             } else {
                                                 txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.black));
