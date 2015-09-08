@@ -194,7 +194,7 @@ public class MainActivity extends FragmentActivity {
             imageButtonTPMS.setImageResource(R.mipmap.blank_icon);
             imageButtonTPMS.setEnabled(false);
         } else {
-            imageButtonTPMS.setImageResource(R.mipmap.tpms_alert);
+            imageButtonTPMS.setImageResource(R.mipmap.tpms_off);
             imageButtonTPMS.setEnabled(true);
         }
 
@@ -721,6 +721,15 @@ public class MainActivity extends FragmentActivity {
                                 txtOdometers.setText(String.valueOf((int) Math.round(odometer)) + " " + odometerUnit);
                             }
                             imageButtonBluetooth.setImageResource(R.mipmap.bluetooth_on);
+                            if (sharedPrefs.getBoolean("prefDataLogging", false)) {
+                                // Log data
+                                if (logger == null) {
+                                    logger = new LogData();
+                                }
+                                if (logger != null) {
+                                    logger.write(message);
+                                }
+                            }
                         } else {
                             Log.d(TAG, "Malformed message, message length: " + msg.arg1);
                         }
@@ -1095,7 +1104,7 @@ public class MainActivity extends FragmentActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        imageButtonTPMS.setImageResource(R.mipmap.tpms_alert);
+                        imageButtonTPMS.setImageResource(R.mipmap.tpms_off);
                     }
                 });
             }

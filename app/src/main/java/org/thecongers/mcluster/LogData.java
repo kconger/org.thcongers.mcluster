@@ -57,7 +57,7 @@ class LogData {
                 File logFile = new File( root, "mCluster-" + curdatetime + ".csv" );
                 FileWriter logWriter = new FileWriter( logFile );
                 outFile = new PrintWriter( logWriter );
-                outFile.write( "Header\n" );
+                outFile.write( "Time(UTC),Message ID,Byte1,Byte2,Byte3,Byte4,Byte5,Byte6,Byte7,Byte8\n" );
             }
         } catch (IOException e) {
             Log.d(TAG, "Could not write to file: " + e.getMessage());
