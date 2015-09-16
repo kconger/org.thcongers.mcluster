@@ -9,7 +9,7 @@
             android:defaultValue="0"
             />
         <ListPreference
-            android:key="prefTempFormat"
+            android:key="prefTempF"
             android:title="@string/pref_tempf_name"
             android:entries="@array/tempf_array"
             android:entryValues="@array/tempf_arrayValues"
@@ -23,7 +23,7 @@
             android:defaultValue="0"
             />
         <ListPreference
-            android:key="prefpressuref"
+            android:key="prefPressureF"
             android:title="@string/pref_pressuref_name"
             android:entries="@array/pressuref_array"
             android:entryValues="@array/pressuref_arrayValues"

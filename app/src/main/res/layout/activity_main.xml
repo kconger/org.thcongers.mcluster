@@ -64,6 +64,15 @@
             android:layout_gravity="center" />
 
         <ImageView
+            android:contentDescription="@string/image_lampf"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@mipmap/lampf"
+            android:id="@+id/imageViewLampf"
+            android:layout_weight="1"
+            android:layout_gravity="center" />
+
+        <ImageView
             android:contentDescription="@string/image_fuel_warning"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -76,7 +85,7 @@
             android:contentDescription="@string/image_tpms"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@mipmap/tpms_alert"
+            android:src="@mipmap/tpms_off"
             android:id="@+id/imageButtonTPMS"
             android:layout_weight="1"
             android:layout_gravity="center"

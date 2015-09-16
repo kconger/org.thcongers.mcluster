@@ -81,6 +81,7 @@ public class MainActivity extends FragmentActivity {
     private ImageView imageHighBeam;
     private ImageView imageHeatedGrips;
     private ImageView imageABS;
+    private ImageView imageLampf;
     private ImageView imageFuelWarning;
     private ImageView imageFuelLevel;
     private ImageView imageESA;
@@ -92,6 +93,8 @@ public class MainActivity extends FragmentActivity {
     private TextView txtGear;
     private TextView txtOdometers;
     private TextView txtESA;
+    private TextView txtEngineTemp;
+    private TextView txtAirTemp;
     private ImageButton imageButtonTPMS;
     private ImageButton imageButtonBluetooth;
     private ImageButton imageButtonPreference;
@@ -110,6 +113,8 @@ public class MainActivity extends FragmentActivity {
     boolean btnPressed = false;
     private boolean fuelAlertTriggered = false;
     private boolean fuelReserveAlertTriggered = true;
+    private boolean freezeAlertTriggered = false;
+    private boolean engineTempAlertTriggered = false;
     private long alertTimer = 0;
     private long darkTimer = 0;
     private long lightTimer = 0;
@@ -119,6 +124,9 @@ public class MainActivity extends FragmentActivity {
     private int rearPressurePSI = 0;
     private int frontStatus = 0;
     private int rearStatus = 3;
+    private double engineTempC = 0.0;
+    private double airTempC = 0.0;
+    private int numInfoViewLayouts = 4;
     private LogData logger = null;
     private static Handler canBusMessages;
     private static Handler sensorMessages;
@@ -168,6 +176,7 @@ public class MainActivity extends FragmentActivity {
         imageHighBeam = (ImageView) findViewById(R.id.imageViewHighBeam);
         imageHeatedGrips = (ImageView) findViewById(R.id.imageViewHeatedGrips);
         imageABS = (ImageView) findViewById(R.id.imageViewABS);
+        imageLampf = (ImageView) findViewById(R.id.imageViewLampf);
         imageFuelWarning = (ImageView) findViewById(R.id.imageViewFuelWarning);
         imageFuelLevel = (ImageView) findViewById(R.id.imageViewFuelLevel);
         imageESA = (ImageView) findViewById(R.id.imageViewESA);
@@ -281,7 +290,7 @@ public class MainActivity extends FragmentActivity {
             @Override
             public void onClick(View v) {
                 int infoViewCurr = Integer.valueOf(sharedPrefs.getString("prefInfoView", "0"));
-                if (infoViewCurr < 2) {
+                if (infoViewCurr < (numInfoViewLayouts - 1)) {
                     infoViewCurr = infoViewCurr + 1;
                 } else {
                     infoViewCurr = 0;
@@ -303,11 +312,6 @@ public class MainActivity extends FragmentActivity {
                         if (msg.arg1 == 27) {
                             byte[] readBuf = (byte[]) msg.obj;
                             String message = new String(readBuf);
-
-                            //Log.d(TAG, "CANBus MSG: " + message);
-                            if (!sharedPrefs.getBoolean("prefDataLogging", false) && (logger != null)) {
-                                logger.write("CANBus MSG: " + message);
-                            }
 
                             //Default Units
                             String speedUnit = "km/h";
@@ -395,15 +399,32 @@ public class MainActivity extends FragmentActivity {
                                 }
 
                             }else if (splitMessage[0].contains("2BC")){
-                                //TODO: Calibration and display
-                                // Oil Temperature
-                                double oilTemp = Integer.parseInt(splitMessage[3], 16 ) - 48.0;
-                                if (sharedPrefs.getString("prefTempFormat", "0").contains("0")) {
-                                    // F
-                                    oilTemp = (9.0 / 5.0) * oilTemp + 32.0;
-                                    temperatureUnit = "F";
+                                //Engine Temperature
+                                engineTempC = (Integer.parseInt(splitMessage[3], 16 ) * 0.75) - 24.0;
+
+                                if (engineTempC >= 115.5) {
+                                    if (engineTempAlertTriggered == false) {
+                                        engineTempAlertTriggered = true;
+                                        speakString(getResources().getString(R.string.engine_temp_alert));
+                                        SharedPreferences.Editor editor = sharedPrefs.edit();
+                                        editor.putString("prefInfoView", String.valueOf(3));
+                                        editor.commit();
+
+                                        updateLayout();
+                                    }
+                                } else {
+                                    engineTempAlertTriggered = false;
                                 }
-                                //Log.d(TAG,oilTemp + temperatureUnit);
+
+                                if (sharedPrefs.getString("prefInfoView", "0").contains("3")) {
+                                    double engineTemp = engineTempC;
+                                    if (sharedPrefs.getString("prefTempF", "0").contains("1")) {
+                                        // F
+                                        engineTemp = (int) Math.round((9.0 / 5.0) * engineTemp + 32.0);
+                                        temperatureUnit = "F";
+                                    }
+                                    txtEngineTemp.setText(String.valueOf(engineTemp) + temperatureUnit);
+                                }
 
                                 // Gear
                                 String gearValue = splitMessage[6].substring(0,1);
@@ -427,16 +448,32 @@ public class MainActivity extends FragmentActivity {
                                 }
                                 txtGear.setText(gear);
 
-                                //TODO: Calibration and display
-                                // Air Intake Temperature
-                                double airTemp = (Integer.parseInt(splitMessage[8], 16 ) - 80.0);
-                                if (sharedPrefs.getString("prefTempFormat", "0").contains("0")) {
-                                    // F
-                                    airTemp = (9.0 / 5.0) * airTemp + 32.0;
-                                    temperatureUnit = "F";
-                                }
-                                //Log.d(TAG,airTemp + temperatureUnit);
+                                //Air Temperature
+                                airTempC = (Integer.parseInt(splitMessage[8], 16 ) * 0.75) - 48.0;
+                                //Freeze Warning
+                                if (airTempC <= 0.0) {
+                                    if (freezeAlertTriggered == false) {
+                                        freezeAlertTriggered = true;
+                                        speakString(getResources().getString(R.string.freeze_alert));
+                                        SharedPreferences.Editor editor = sharedPrefs.edit();
+                                        editor.putString("prefInfoView", String.valueOf(3));
+                                        editor.commit();
 
+                                        updateLayout();
+                                    }
+                                } else {
+                                    freezeAlertTriggered = false;
+                                }
+
+                                if (sharedPrefs.getString("prefInfoView", "0").contains("3")) {
+                                    double airTemp = airTempC;
+                                    if (sharedPrefs.getString("prefTempF", "0").contains("1")) {
+                                        // F
+                                        airTemp = (int) Math.round((9.0 / 5.0) * airTemp + 32.0);
+                                        temperatureUnit = "F";
+                                    }
+                                    txtAirTemp.setText(String.valueOf(airTemp) + temperatureUnit);
+                                }
 
                             }else if (splitMessage[0].contains("2D0")){
                                 //Info Button
@@ -445,7 +482,7 @@ public class MainActivity extends FragmentActivity {
                                     //Short Press
                                     if (!btnPressed) {
                                         int infoButton = Integer.valueOf(sharedPrefs.getString("prefInfoView", "0"));
-                                        if (infoButton < 2) {
+                                        if (infoButton < (numInfoViewLayouts - 1)) {
                                             infoButton = infoButton + 1;
                                         } else {
                                             infoButton = 0;
@@ -640,6 +677,26 @@ public class MainActivity extends FragmentActivity {
                                     imageESA.setImageResource(R.mipmap.blank_icon);
                                 }
 
+                                //Lamp Fault
+                                //TODO: Display/speak Bulb location
+                                String lampFaultValue = splitMessage[3].substring(0, 1);
+                                if (lampFaultValue.contains("0")){
+                                    //None
+                                    imageLampf.setImageResource(R.mipmap.blank_icon);
+                                }else if (lampFaultValue.contains("1")){
+                                    //Low Beam
+                                    imageLampf.setImageResource(R.mipmap.lampf);
+                                }else if (lampFaultValue.contains("4")){
+                                    //High Beam
+                                    imageLampf.setImageResource(R.mipmap.lampf);
+                                }else if (lampFaultValue.contains("8")){
+                                    //Signal Bulb
+                                    imageLampf.setImageResource(R.mipmap.lampf);
+                                }else{
+                                    //Unknown
+                                    imageLampf.setImageResource(R.mipmap.lampf);
+                                }
+
                                 //Fuel Level
                                 double fuelLevelPercent = ((Integer.parseInt(splitMessage[4], 16) - 73) / 182.0) * 100.0;
                                 progressFuelLevel.setProgress((int) Math.round(fuelLevelPercent));
@@ -785,13 +842,13 @@ public class MainActivity extends FragmentActivity {
                                     // Get pressure thresholds
                                     int lowPressure = Integer.parseInt(sharedPrefs.getString("prefLowPressure", "30"));
                                     int highPressure = Integer.parseInt(sharedPrefs.getString("prefHighPressure", "46"));
-                                    if (sharedPrefs.getString("preftempf", "0").contains("0")) {
+                                    if (sharedPrefs.getString("prefTempF", "0").contains("1")) {
                                         // F
                                         temp = (9.0 / 5.0) * tempC + 32.0;
                                         temperatureUnit = "F";
                                     }
                                     int formattedTemperature = (int) (temp + 0.5d);
-                                    String pressureFormat = sharedPrefs.getString("prefpressuref", "0");
+                                    String pressureFormat = sharedPrefs.getString("prefPressureF", "0");
                                     if (pressureFormat.contains("1")) {
                                         // KPa
                                         pressure = psi * 6.894757293168361;
@@ -808,11 +865,6 @@ public class MainActivity extends FragmentActivity {
                                     int formattedPressure = (int) (pressure + 0.5d);
                                     // Get checksum
                                     String checksum = hexData[11];
-
-                                    //Log.d(TAG, "Sensor ID: " + sensorID.toString() + ", Sensor Position: " + position + ", Temperature(" + temperatureUnit + "): " + String.valueOf(temp) + ", Pressure(" + pressureUnit + "): " + String.valueOf(pressure) + ", Voltage: " + String.valueOf(voltage) + ", Checksum: " + checksum + ", Data: " + sbhex.toString() + ", Bytes:" + msg.arg1);
-                                    if (!sharedPrefs.getBoolean("prefDataLogging", false) && (logger != null)) {
-                                        logger.write("iTPMS MSG: Sensor ID: " + sensorID.toString() + ", Sensor Position: " + position + ", Temperature(" + temperatureUnit + "): " + String.valueOf(temp) + ", Pressure(" + pressureUnit + "): " + String.valueOf(pressure) + ", Voltage: " + String.valueOf(voltage) + ", Checksum: " + checksum + ", Data: " + sbhex.toString() + ", Bytes:" + msg.arg1);
-                                    }
 
                                     if (Integer.parseInt(hexData[3], 16) <= 2) {
                                         Log.d(TAG, "Front ID matched: " + Integer.parseInt(hexData[3], 16));
@@ -904,6 +956,15 @@ public class MainActivity extends FragmentActivity {
                                     }
                                 } catch (NumberFormatException e) {
                                     Log.d(TAG, "Malformed message, unexpected value");
+                                }
+                                if (sharedPrefs.getBoolean("prefDataLogging", false)) {
+                                    // Log data
+                                    if (logger == null) {
+                                        logger = new LogData();
+                                    }
+                                    if (logger != null) {
+                                        logger.write(String.valueOf(sbhex));
+                                    }
                                 }
                             }
                         } else {
@@ -1382,6 +1443,12 @@ public class MainActivity extends FragmentActivity {
                 parent.removeView(otherLayout);
             }
 
+            View tempsLayout = findViewById(R.id.layoutInfoTemps);
+            if (tempsLayout != null ) {
+                ViewGroup parent = (ViewGroup) tempsLayout.getParent();
+                parent.removeView(tempsLayout);
+            }
+
             LinearLayout infoOtherLayout = (LinearLayout) findViewById(R.id.layoutInfoOther);
             if (infoOtherLayout == null) {
                 LinearLayout infoLayout = (LinearLayout) findViewById(R.id.layoutInfo);
@@ -1407,6 +1474,12 @@ public class MainActivity extends FragmentActivity {
                 parent.removeView(otherLayout);
             }
 
+            View tempsLayout = findViewById(R.id.layoutInfoTemps);
+            if (tempsLayout != null ) {
+                ViewGroup parent = (ViewGroup) tempsLayout.getParent();
+                parent.removeView(tempsLayout);
+            }
+
             LinearLayout infoOtherLayout = (LinearLayout) findViewById(R.id.layoutInfoOther);
             if (infoOtherLayout == null) {
                 LinearLayout infoLayout = (LinearLayout) findViewById(R.id.layoutInfo);
@@ -1430,6 +1503,12 @@ public class MainActivity extends FragmentActivity {
             if (otherLayout != null ) {
                 ViewGroup parent = (ViewGroup) otherLayout.getParent();
                 parent.removeView(otherLayout);
+            }
+
+            View tempsLayout = findViewById(R.id.layoutInfoTemps);
+            if (tempsLayout != null ) {
+                ViewGroup parent = (ViewGroup) tempsLayout.getParent();
+                parent.removeView(tempsLayout);
             }
 
             LinearLayout infoTPMSLayout = (LinearLayout) findViewById(R.id.layoutInfoTPMS);
@@ -1475,6 +1554,50 @@ public class MainActivity extends FragmentActivity {
                 txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.white));
                 txtRearTPMS.setTextColor(getResources().getColor(android.R.color.white));
             }
+        }else if (sharedPrefs.getString("prefInfoView", "0").contains("3")) {
+            View otherLayout = findViewById(R.id.layoutInfoOther);
+            if (otherLayout != null ) {
+                ViewGroup parent = (ViewGroup) otherLayout.getParent();
+                parent.removeView(otherLayout);
+            }
+
+            View tpmsLayout = findViewById(R.id.layoutInfoTPMS);
+            if (tpmsLayout != null ) {
+                ViewGroup parent = (ViewGroup) tpmsLayout.getParent();
+                parent.removeView(tpmsLayout);
+            }
+
+            LinearLayout infoTPMSLayout = (LinearLayout) findViewById(R.id.layoutInfoTemps);
+            if (infoTPMSLayout == null) {
+                LinearLayout myLayout = (LinearLayout) findViewById(R.id.layoutInfo);
+                View infoView = getLayoutInflater().inflate(R.layout.activity_main_temps, myLayout, false);
+                myLayout.addView(infoView);
+            }
+
+            String temperatureUnit = "C";
+            double engineTemp = engineTempC;
+            double airTemp = airTempC;
+            String temperatureFormat = sharedPrefs.getString("prefTempF", "0");
+            if (temperatureFormat.contains("1")) {
+                // F
+                engineTemp = (int) Math.round((9.0 / 5.0) * engineTemp + 32.0);
+                airTemp = (int) Math.round((9.0 / 5.0) * airTemp + 32.0);
+                temperatureUnit = "F";
+            }
+            txtEngineTemp = (TextView) findViewById(R.id.textViewEngineTemp);
+            txtEngineTemp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+            txtEngineTemp.setText(engineTemp + " " + temperatureUnit);
+            txtAirTemp = (TextView) findViewById(R.id.textViewAirTemp);
+            txtAirTemp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+            txtAirTemp.setText(airTemp + " " + temperatureUnit);
+            // Update Colors
+            if ((!itsDark) && (!sharedPrefs.getBoolean("prefNightMode", false))){
+                txtEngineTemp.setTextColor(getResources().getColor(android.R.color.black));
+                txtAirTemp.setTextColor(getResources().getColor(android.R.color.black));
+            } else {
+                txtEngineTemp.setTextColor(getResources().getColor(android.R.color.white));
+                txtAirTemp.setTextColor(getResources().getColor(android.R.color.white));
+            }
         }
     }
 
@@ -1494,6 +1617,9 @@ public class MainActivity extends FragmentActivity {
             } else if ((txtFrontTPMS != null) && (txtRearTPMS != null)){
                 txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.black));
                 txtRearTPMS.setTextColor(getResources().getColor(android.R.color.black));
+            } else if ((txtEngineTemp != null) && (txtAirTemp != null)){
+                txtEngineTemp.setTextColor(getResources().getColor(android.R.color.black));
+                txtAirTemp.setTextColor(getResources().getColor(android.R.color.black));
             }
             txtSpeed.setTextColor(getResources().getColor(android.R.color.black));
             txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.black));
@@ -1516,6 +1642,9 @@ public class MainActivity extends FragmentActivity {
             } else if ((txtFrontTPMS != null) && (txtRearTPMS != null)){
                 txtFrontTPMS.setTextColor(getResources().getColor(android.R.color.white));
                 txtRearTPMS.setTextColor(getResources().getColor(android.R.color.white));
+            } else if ((txtEngineTemp != null) && (txtAirTemp != null)){
+                txtEngineTemp.setTextColor(getResources().getColor(android.R.color.white));
+                txtAirTemp.setTextColor(getResources().getColor(android.R.color.white));
             }
             txtSpeed.setTextColor(getResources().getColor(android.R.color.white));
             txtSpeedUnit.setTextColor(getResources().getColor(android.R.color.white));

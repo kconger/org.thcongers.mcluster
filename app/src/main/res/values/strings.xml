@@ -8,6 +8,7 @@
     <string name="image_heated_grips">Heated Grips</string>
     <string name="image_abs">ABS Status</string>
     <string name="image_kill_switch">Kill Switch</string>
+    <string name="image_lampf">Lamp Fault</string>
     <string name="image_fuel_warning">Fuel Warning</string>
     <string name="image_tpms">TPMS Status</string>
     <string name="image_bluetooth">Bluetooth Status</string>
@@ -26,16 +27,18 @@
         <item name="1">RPM</item>
         <item name="2">Bearing</item>
         <item name="3">TPMS</item>
+        <item name="4">Temperatures</item>
     </string-array>
     <string-array name="infoview_arrayValues">
         <item name="1">0</item>
         <item name="2">1</item>
         <item name="3">2</item>
+        <item name="4">3</item>
     </string-array>
     <string name="pref_tempf_name">Temperature Unit</string>
     <string-array name="tempf_array">
-        <item name="1">Fahrenheit</item>
-        <item name="2">Celsius</item>
+        <item name="1">Celsius</item>
+        <item name="2">Fahrenheit</item>
     </string-array>
     <string-array name="tempf_arrayValues">
         <item name="1">0</item>
@@ -118,10 +121,16 @@
     <string name="toast_noPaired">No previously paired CANBusGateway found</string>
     <string name="toast_noPairedTPMS">No previously paired iTPMS found</string>
     <string name="toast_connectedTo">Connected to:</string>
-    <!-- Misc messages -->
+    <!-- Fuel messages -->
     <string name="fuel_alert_begin">Fuel level is at </string>
     <string name="fuel_alert_end"> percent</string>
     <string name="fuel_alert_reserve">You are now on reserve</string>
+    <!-- Engine Temp messages -->
+    <string name="engine_temp_desc">Engine</string>
+    <string name="engine_temp_alert">Engine temperature is too high</string>
+    <!-- Air Temp messages -->
+    <string name="air_temp_desc">Air</string>
+    <string name="freeze_alert">Icy conditions warning</string>
     <!-- Pressure alert messages -->
     <string name="alert_lowFrontPressure">Low front tire pressure</string>
     <string name="alert_highFrontPressure">High front tire pressure</string>
